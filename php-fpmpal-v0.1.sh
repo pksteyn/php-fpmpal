@@ -6,7 +6,8 @@ echo -e "\e[33m\e[1m(()/(  )\())(()/(     (()/( (()/(  )\))(             )  )\  
 echo -e "\e[91m /(_))((_)\  /(_))     /(_)) /(_))((_)()\  \`  )   ( /( ((_) "
 echo -e "\e[33m(_))   _((_)(_))      (_))_|(_))  (_()((_) /(/(   )(_)) _   "
 echo -e "\e[0m\e[96m| _ \ | || || _ \ ___ | |_  | _ \ |  \/  |\e[91m\e[1m((_)_\ ((_)\e[0m\e[96m_ | |  "
-echo -e "|  _/ | __ ||  _/|___|| __| |  _/ | |\/| || '_ \)/ _\` || |  "
+echo -ne "|  _/ | __ ||  _/|___|| __| |  _/ | |\/| || '_ \\"
+echo -e "\e[91m\e[1m)\e[0m\e[96m/ _\` || |  "
 echo -e "|_|   |_||_||_|       |_|   |_|   |_|  |_|| .__/ \__,_||_|  "
 echo -e "========================================= |_| ============\e[0m"
 echo
@@ -72,6 +73,12 @@ do
    echo -n "Number of processes: "
    echo ${#list_of_pids[@]}
 
+   ### Get the current max_children value
+   echo -n "Current max_children value: "
+   config_file_location=`grep "\[${list_of_pools[$i]}\]" $pool_directory | cut -d: -f1`
+   current_max_children_value=`grep "^pm.max_children" $config_file_location | cut -d= -f2 | sed -e 's/ //g'`
+   echo $current_max_children_value
+
    ### Calculate the total memory usage for this pool
    total_pool_mem_usage[$i]=0
    ### For each process
@@ -90,12 +97,6 @@ do
    echo -n "Average memory usage per process in KB: "
    pool_ave_process_size[$i]=`echo "${total_pool_mem_usage[$i]} / ${#list_of_pids[@]}" | bc`
    echo ${pool_ave_process_size[$i]}
-
-   ### Get the current max_children value
-   echo -n "Current max_children value: "
-   config_file_location=`grep "\[${list_of_pools[$i]}\]" $pool_directory | cut -d: -f1`
-   current_max_children_value=`grep "^pm.max_children" $config_file_location | cut -d= -f2 | sed -e 's/ //g'`
-   echo $current_max_children_value
 
    ### Get the largest pool process size
    echo -n "Largest process in this pool is (KB): "
@@ -138,11 +139,11 @@ done
 echo -e "\e[32m\e[1m=== Server memory usage statistics ===\e[0m"
 
 ### Total server memory
-echo -n "Total server memory in KB: "
-echo $total_server_memory
+echo -ne "Total server memory in KB: "
+echo -e "$total_server_memory"
 
 ### Calculate total Apache memory usage
-echo -n "Total Apache memory usage in KB: "
+echo -n "  =Total Apache memory usage in KB: "
 ### Gather the process name for Apache (httpd for RHEL/CentOS; apache2 for Ubuntu 
 apache_process_name=`apachectl -V 2>&1 | grep PID | awk -F"run/" '{print $2}' | cut -d. -f1`
 ### If Apache is running
@@ -163,7 +164,7 @@ ps aux | grep -v ^root | egrep $apache_process_name > /dev/null
 echo $total_apache_pool_mem_usage
 
 ### Calculate total Varnish memory usage
-echo -n "Total Varnish memory usage in KB: "
+echo -n "  =Total Varnish memory usage in KB: "
 ### If Varnish is running
 ps aux | grep -v ^root | grep varnish > /dev/null
    if [ $? == 0 ]; then
@@ -178,7 +179,7 @@ ps aux | grep -v ^root | grep varnish > /dev/null
 echo $total_varnish_mem_usage
 
 ### Calculate total MySQL memory usage
-echo -n "Total MySQL memory usage in KB: "
+echo -n "  =Total MySQL memory usage in KB: "
 ### If MySQL is running
 ps aux | grep -v ^root | grep mysql > /dev/null
    if [ $? == 0 ]; then
@@ -193,7 +194,7 @@ ps aux | grep -v ^root | grep mysql > /dev/null
 echo $total_mysql_pool_mem_usage
 
 echo
-### Calculate total memory that would be avaible for PHP-FPM to use by subtracting memory usage from all other processes from the server's total memory
+### Calculate total memory that would be available for PHP-FPM to use by subtracting memory usage from all other processes from the server's total memory
 echo -n "Memory available to assign to PHP-FPM pools in KB: "
    ### Total memory usage - (the sum of all other processes listed above)
    #total_phpfpm_allowed_memory=`echo "$total_server_memory - ($total_apache_pool_mem_usage + $total_mysql_pool_mem_usage + $total_varnish_mem_usage)" | bc`
@@ -211,7 +212,7 @@ echo
 ### Print out total potential PHP-FPM usage based on largest process size per pool
    echo -n "Total potential PHP-FPM memory usage based on largest processes (KB): "
    echo -n $total_phpfpm_mem_usage_largest_process
-   echo -n " (`echo "scale=2; $total_phpfpm_mem_usage_largest_process*100/$total_phpfpm_allowed_memory" | bc `"
+   echo -ne "\e[33m (`echo "scale=2; $total_phpfpm_mem_usage_largest_process*100/$total_phpfpm_allowed_memory" | bc `"
    echo -n "%)"
    # Print warning if this is larger than allowed PHP-FPM memory usage
    if [ $total_phpfpm_mem_usage_largest_process -gt $total_phpfpm_allowed_memory ]; then
@@ -223,7 +224,7 @@ echo
 ### Print out total potential PHP-FPM usage based on largest process size per pool
    echo -n "Total potential PHP-FPM memory usage based on average process size (KB): "
    echo -n $total_phpfpm_mem_usage_average_process
-   echo -n " (`echo "scale=2; $total_phpfpm_mem_usage_average_process*100/$total_phpfpm_allowed_memory" | bc `"
+   echo -ne "\e[33m (`echo "scale=2; $total_phpfpm_mem_usage_average_process*100/$total_phpfpm_allowed_memory" | bc `"
    echo -n "%)"
    # Print warning if this is larger than allowed PHP-FPM memory usage
    if [ $total_phpfpm_mem_usage_average_process -gt $total_phpfpm_allowed_memory ]; then
@@ -254,7 +255,7 @@ do
    ### Get the current max_children value for this PHP-FPM pool
    current_max_children_value=`grep "^pm.max_children" $config_file_location | cut -d= -f2 | sed -e 's/ //g'`
    ### Print out all this information
-   echo -e "\e[36m\e[1m-- ${list_of_pools[$i]} --\e[0m currently uses ${total_pool_mem_usage[$i]} KB memory (\e[33m${pool_perc_mem_use[$i]}%\e[0m of all PHP-FPM memory usage). It should be allowed to use about ${pool_allowed_mem_use[$i]} KB of all available memory. Its average process size is ${pool_ave_process_size[$i]} KB so this means \e[31mmax_children should be set to ~\e[1m${pool_allowed_max_children[$i]}\e[0m. It is currently set to $current_max_children_value (this can be changed in $config_file_location)."
+   echo -e "\e[36m\e[1m-- ${list_of_pools[$i]} --\e[0m currently uses ${total_pool_mem_usage[$i]} KB memory (\e[33m${pool_perc_mem_use[$i]}%\e[0m of all PHP-FPM memory usage). It should be allowed to use about ${pool_allowed_mem_use[$i]} KB of all available memory. Its average process size is ${pool_ave_process_size[$i]} KB so this means \e[38;5;208mmax_children should be set to ~\e[1m${pool_allowed_max_children[$i]}\e[0m. It is currently set to $current_max_children_value (this can be changed in $config_file_location)."
 done
 
 echo
