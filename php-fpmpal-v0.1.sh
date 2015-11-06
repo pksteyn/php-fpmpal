@@ -1,17 +1,21 @@
 #! /bin/bash
 
-echo -e "\e[33m (        )  (         (     (       *                      "
-echo -e "\e[91m )\ )  ( /(  )\ )      )\ )  )\ )  (  \`                 (   "
-echo -e "\e[33m\e[1m(()/(  )\())(()/(     (()/( (()/(  )\))(             )  )\  "
-echo -e "\e[91m /(_))((_)\  /(_))     /(_)) /(_))((_)()\  \`  )   ( /( ((_) "
-echo -e "\e[33m(_))   _((_)(_))      (_))_|(_))  (_()((_) /(/(   )(_)) _   "
-echo -e "\e[0m\e[96m| _ \ | || || _ \ ___ | |_  | _ \ |  \/  |\e[91m\e[1m((_)_\ ((_)\e[0m\e[96m_ | |  "
-echo -ne "|  _/ | __ ||  _/|___|| __| |  _/ | |\/| || '_ \\"
-echo -e "\e[91m\e[1m)\e[0m\e[96m/ _\` || |  "
-echo -e "|_|   |_||_||_|       |_|   |_|   |_|  |_|| .__/ \__,_||_|  "
-echo -e "========================================= |_| ============\e[0m"
 echo
-
+echo -e "\e[33m (        )  (         (     (       *                      "
+echo -e "\e[33m\e[1m )\ )  ( /(  )\ )      )\ )  )\ )  (  \`                 (   "
+echo -e "\e[38;5;208m(()/(  )\())(()/(     (()/( (()/(  )\))(             )  )\  "
+echo -e "\e[38;5;208m /(_))((_)\  /(_))     /(_)) /(_))((_)()\  \`  )   ( /( ((_) "
+echo -e "\e[91m(_))   _((_)(_))      (_))_|(_))  (_()((_) /(/(   )(_)) _   "
+echo -e "\e[0m\e[38;5;21m| _ \ | || || _ \ ___ | |_  | _ \ |  \/  |\e[91m\e[1m((_)_\ ((_)\e[0m\e[38;5;21m_ | |  "
+echo -ne "|  _/ | __ ||  _/|___|| __| |  _/ | |\/| || '_ \\"
+echo -e "\e[91m\e[1m)\e[0m\e[38;5;21m/ _\` || |  "
+echo -e "|_|   |_||_||_|       |_|   |_|   |_|  |_|| .__/ \__,_||_|  "
+#echo -e "========================================= |_| ============\e[0m"
+for i in {17..21} {21..17} {17..21} {21..17} {17..21} {21..17} {17..21} {21..17} {17..17} ; do echo -en "\e[38;5;${i}m=\e[0m" ; done
+echo -en "\e[38;5;21m |_| "
+for i in {17..21} {21..21} {21..21} {21..21} {20..16} ; do echo -en "\e[38;5;${i}m=\e[0m" ; done
+echo -e "\e[0m"
+echo
 
 ### Get list of all PHP-FPM pools from proces list
 IFS=$'\n' list_of_pools=($(ps aux | grep "php-fpm" | grep -v ^root | grep -v grep | awk -F "pool " '{print $2}' | sort | uniq | sed -e 's/ //g'))
@@ -47,7 +51,9 @@ fi
 ### Give info re all list of PHP-FPM pools
 ### ======================================
 
-echo -e "\e[32m\e[1m=== List of PHP-FPM pools ===\e[0m"
+echo -en "\e[38;5;22m=\e[38;5;28m=\e[38;5;34m=\e[38;5;40m=\e[38;5;46m="
+echo -en "\e[32m\e[1m List of PHP-FPM pools \e[0m"
+echo -e "\e[38;5;46m=\e[38;5;40m=\e[38;5;34m=\e[38;5;28m=\e[38;5;22m=\e[0m"
 
 ### For each pool
 for ((i=0; i<=no_of_pools; i++))
@@ -136,7 +142,10 @@ done
 
 ### Print out statistics re server memory usage
 ### ===========================================
-echo -e "\e[32m\e[1m=== Server memory usage statistics ===\e[0m"
+
+echo -en "\e[38;5;22m=\e[38;5;28m=\e[38;5;34m=\e[38;5;40m=\e[38;5;46m="
+echo -en "\e[32m\e[1m Server memory usage statistics \e[0m"
+echo -e "\e[38;5;46m=\e[38;5;40m=\e[38;5;34m=\e[38;5;28m=\e[38;5;22m=\e[0m"
 
 ### Total server memory
 echo -ne "Total server memory in KB: "
@@ -239,7 +248,10 @@ echo
 
 ### Calculate and display recommendations for every PHP-FPM pool
 ### ============================================================
-echo -e "\e[32m\e[1m=== Recommendations per pool ===\e[0m"
+
+echo -en "\e[38;5;22m=\e[38;5;28m=\e[38;5;34m=\e[38;5;40m=\e[38;5;46m="
+echo -en "\e[32m\e[1m Recommendations per pool \e[0m"
+echo -e "\e[38;5;46m=\e[38;5;40m=\e[38;5;34m=\e[38;5;28m=\e[38;5;22m=\e[0m"
 
 ### For every PHP-FPM pool
 for ((i=0; i<=no_of_pools; i++))
@@ -261,3 +273,7 @@ done
 echo
 ### END OF Calculate and display recommendations for every PHP-FPM pool
 ### ===================================================================
+
+for i in {17..21} {21..17} {17..21} {21..17} {17..21} {21..17} {17..21} {21..17} {17..21} {21..17} {17..21} {21..17} ; do echo -en "\e[38;5;${i}m=\e[0m" ; done
+echo -e "\e[0m"
+echo
