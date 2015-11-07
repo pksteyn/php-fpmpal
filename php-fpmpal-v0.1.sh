@@ -72,6 +72,14 @@ if [ -z "$pool_directory" ]; then
    exit 1
 fi
 
+### Check if PHP-FPM is running
+ps aux | grep "php-fpm" | grep -v grep |  grep -v "php-fpmpal" 1> /dev/null 2>&1
+if [ $? == 1 ]; then
+   echo -e "\e[31m!!! PHP-FPM is installed but not running. PHP-FPM should be started before running this script. Exiting. !!!\e[0m"
+   echo
+   exit 1
+fi
+
 ### Exit if bc is not installed
 bc -v 1> /dev/null 2>&1
 if [ $? != 0 ]; then
