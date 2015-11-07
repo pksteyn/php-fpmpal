@@ -51,6 +51,8 @@ total_phpfpm_mem_usage_average_process=0
 let no_of_pools=(${#list_of_pools[@]}-1)
 
 ### Determine whether the PHP-FPM process is called php-fpm or php5-fpm, and set the pool directory accordingly
+pool_directory=""
+
 php-fpm -v 1> /dev/null 2>&1
 if [ $? == 0 ]; then
    pool_directory="/etc/php-fpm.d/*.conf"
@@ -62,6 +64,22 @@ if [ $? == 0 ]; then
    pool_directory="/etc/php5/fpm/pool.d/*.conf"
    fpm_type="php5-fpm"
 fi
+
+### Exit if PHP-FPM is not installed
+if [ -z "$pool_directory" ]; then
+   echo -e "\e[31m!!! PHP-FPM not detected. Exiting. !!!\e[0m"
+   echo
+   exit 1
+fi
+
+### Exit if bc is not installed
+bc -v 1> /dev/null 2>&1
+if [ $? != 0 ]; then
+   echo -e "\e[31m\"bc\" is not installed. This script depends on it. Exiting. \e[0m"
+   echo 
+   exit 1
+fi
+
 
 ### Give info re all list of PHP-FPM pools
 ### ======================================
@@ -119,6 +137,12 @@ do
    pool_ave_process_size[$i]=`echo "${total_pool_mem_usage[$i]} / ${#list_of_pids[@]}" | bc`
    echo ${pool_ave_process_size[$i]}
 
+   ### Total potential memory usage for pool based on average process size: max_children * average process size
+   echo -n "Total potential memory usage for pool (based on average process) (KB): "
+   potential_mem_usage=`echo "$current_max_children_value * ${pool_ave_process_size[$i]}" | bc`
+   let total_phpfpm_mem_usage_average_process+=$potential_mem_usage
+   echo $potential_mem_usage
+
    ### Get the largest pool process size
    echo -n "Largest process in this pool is (KB): "
    for a in "${list_of_pids[@]}"
@@ -128,16 +152,10 @@ do
    let largest_pool_process_size=`echo "${pool_processes_mem_size[*]}" | sort -nr | head -1`
    echo $largest_pool_process_size
 
-   ### Total memory usage: max_children * largest process size
+   ### Total potential memory usage for pool based on largest process size: max_children * largest process size
    echo -n "Total potential memory usage for pool (based on largest process) (KB): "
    potential_mem_usage=`echo "$current_max_children_value * $largest_pool_process_size" | bc`
    let total_phpfpm_mem_usage_largest_process+=$potential_mem_usage
-   echo $potential_mem_usage
-
-   ### Total memory usage: max_children * average process size
-   echo -n "Total potential memory usage for pool (based on average process) (KB): "
-   potential_mem_usage=`echo "$current_max_children_value * ${pool_ave_process_size[$i]}" | bc`
-   let total_phpfpm_mem_usage_average_process+=$potential_mem_usage
    echo $potential_mem_usage
 
    echo
@@ -168,24 +186,48 @@ echo -e "$total_server_memory"
 
 ### Calculate total Apache memory usage
 echo -n "  =Total Apache memory usage in KB: "
-### Gather the process name for Apache (httpd for RHEL/CentOS; apache2 for Ubuntu 
-apache_process_name=`apachectl -V 2>&1 | grep PID | awk -F"run/" '{print $2}' | cut -d. -f1`
-### If Apache is running
-ps aux | grep -v ^root | egrep $apache_process_name > /dev/null
-   if [ $? == 0 ]; then
-      ### Get a list of all Apache process IDs
-      IFS=$'\n' list_of_apache_pids=($(ps aux | grep $apache_process_name | grep -v ^root | grep -v grep | awk '{print $2}'))
-      total_apache_pool_mem_usage=0
-      ### Add the memory usage for that process to the total Apache memory usage
-      for a in "${list_of_apache_pids[@]}"
-      do
-         let total_apache_pool_mem_usage+=`pmap -d $a | grep "writeable/private" | awk '{ print $4 }' | sed -e s/K//`
-      done
-   ### Else if Apache is not running set total Apache memory usage to 0
-   else
-      total_apache_pool_mem_usage=0
-   fi
+# If Apache is installed
+apachectl -V 1> /dev/null 2>&1
+if [ $? == 0 ]; then
+   ### Gather the process name for Apache (httpd for RHEL/CentOS; apache2 for Ubuntu 
+   apache_process_name=`apachectl -V 2>&1 | grep PID | awk -F"run/" '{print $2}' | cut -d. -f1`
+   ### If Apache is running
+   ps aux | grep -v ^root | egrep $apache_process_name > /dev/null
+      if [ $? == 0 ]; then
+         ### Get a list of all Apache process IDs
+         IFS=$'\n' list_of_apache_pids=($(ps aux | grep $apache_process_name | grep -v ^root | grep -v grep | awk '{print $2}'))
+         total_apache_pool_mem_usage=0
+         ### Add the memory usage for that process to the total Apache memory usage
+         for a in "${list_of_apache_pids[@]}"
+         do
+            let total_apache_pool_mem_usage+=`pmap -d $a | grep "writeable/private" | awk '{ print $4 }' | sed -e s/K//`
+         done
+      ### Else if Apache is not running set total Apache memory usage to 0
+      else
+         total_apache_pool_mem_usage=0
+      fi
+else
+   total_apache_pool_mem_usage=0
+fi
 echo $total_apache_pool_mem_usage
+
+### Calculate total nginx memory usage
+echo -n "  =Total nginx memory usage in KB: "
+nginx -v 1> /dev/null 2>&1
+# If nginx is installed
+if [ $? == 0 ]; then
+   IFS=$'\n' list_of_nginx_pids=($(ps aux | grep -i nginx | grep -v ^root | grep -v grep | awk '{print $2}'))
+   total_nginx_mem_usage=0
+   ### Add the memort usage for that process to the total nginx memory usage
+   for a in "${list_of_nginx_pids[@]}"
+   do
+      let total_nginx_mem_usage+=`pmap -d $a | grep "writeable/private" | awk '{ print $4 }' | sed -e s/K//`
+   done
+# else if nginx is not installed
+else
+   total_nginx_mem_usage=0
+fi
+echo $total_nginx_mem_usage
 
 ### Calculate total Varnish memory usage
 echo -n "  =Total Varnish memory usage in KB: "
@@ -245,7 +287,7 @@ echo
       echo -e " \e[32m...GOOD :-)\e[0m"
    fi
 
-### Print out total potential PHP-FPM usage based on largest process size per pool
+### Print out total potential PHP-FPM usage based on average process size per pool
    echo -n "Total potential PHP-FPM memory usage based on average process size (KB): "
    echo -n $total_phpfpm_mem_usage_average_process
    echo -ne "\e[33m (`echo "scale=2; $total_phpfpm_mem_usage_average_process*100/$total_phpfpm_allowed_memory" | bc `"
