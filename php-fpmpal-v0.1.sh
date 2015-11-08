@@ -50,6 +50,57 @@ total_phpfpm_mem_usage_average_process=0
 ### Set variable to the total number of PHP-FPM pools
 let no_of_pools=(${#list_of_pools[@]}-1)
 
+
+### Get list of possible configuration files
+#echo "List of includes"
+IFS=$'\n' list_of_includes=($(grep -i ^include `ps aux | egrep "php.*master" | grep -v grep | cut -d\( -f2 | cut -d\) -f1` | cut -d= -f2))
+#echo ${list_of_includes[*]}
+#echo "end of list"
+
+### Set total number of include files
+let no_of_includes=(${#list_of_includes[@]}-1)
+
+### Match each pool to its configuration file
+#echo "List of pools"
+#echo ${list_of_pools[*]}
+
+#echo "Matching pools to configuration files"
+# For each pool
+#for p in "${list_of_pools[@]}"
+for ((p=0; p<=no_of_pools; p++))
+do
+   #echo -n "Pool: "
+   #echo ${list_of_pools[$p]}
+   # For each include file
+   #for i in "${list_of_includes[@]}"
+   for ((i=0; i<=no_of_includes; i++ ))
+   do
+      #echo -n "   config file that I'm checking: "
+      #echo ${list_of_includes[$i]}
+      #echo "grep \"\[${list_of_pools[$p]}\]\" ${list_of_includes[$i]}"
+      #result=`grep "\[${list_of_pools[$p]}\]" ${list_of_includes[$i]}` > /dev/null
+      grep "\[${list_of_pools[$p]}\]" ${list_of_includes[$i]} > /dev/null
+      #echo $result
+      if [ $? == 0 ]; then
+         #echo $?
+         #IFS=$'\n' pool_config_file[$p]=${list_of_includes[$i]}
+         pool_config_file[$p]="${list_of_includes[$i]}"
+         #pool_config_file[$p]="whaaat"
+         #echo -n "       I've found a matching pool file and it's called: "
+         #echo ${pool_config_file[$p]}
+      fi
+   done
+done
+
+#echo "END OF MATCHING"
+
+
+########################
+
+
+
+
+
 ### Determine whether the PHP-FPM process is called php-fpm or php5-fpm, and set the pool directory accordingly
 pool_directory=""
 
@@ -103,7 +154,8 @@ do
    echo -en "\e[36m\e[1m--- "
    echo -en ${list_of_pools[$i]}
    echo -e " ---\e[0m"
-   echo -n "Configuration file: "; echo `grep "\[${list_of_pools[$i]}\]" $pool_directory | cut -d: -f1`
+   #echo -n "Configuration file: "; echo `grep "\[${list_of_pools[$i]}\]" $pool_directory | cut -d: -f1`
+   echo -n "Configuration file: "; echo `grep -H "\[${list_of_pools[$i]}\]" ${pool_config_file[$i]} | cut -d: -f1`
 
    ### Create a list of process IDs that belong to this pool
    if [ $fpm_type == "php-fpm" ]; then ### For RHEL/CentOS release use this command
@@ -122,8 +174,9 @@ do
 
    ### Get the current max_children value
    echo -n "Current max_children value: "
-   config_file_location=`grep "\[${list_of_pools[$i]}\]" $pool_directory | cut -d: -f1`
-   current_max_children_value=`grep "^pm.max_children" $config_file_location | cut -d= -f2 | sed -e 's/ //g'`
+   #config_file_location=`grep "\[${list_of_pools[$i]}\]" $pool_directory | cut -d: -f1`
+   #current_max_children_value=`grep "^pm.max_children" $config_file_location | cut -d= -f2 | sed -e 's/ //g'`
+   current_max_children_value=`grep "^pm.max_children" ${pool_config_file[$i]} | cut -d= -f2 | sed -e 's/ //g'`
    echo $current_max_children_value
 
    ### Calculate the total memory usage for this pool
@@ -328,11 +381,12 @@ do
    ### Divide the average process size for this pool by the total "allowed" memory usage for this pool to get a recommended max_children value
    pool_allowed_max_children[$i]=`echo "${pool_allowed_mem_use[$i]} / ${pool_ave_process_size[$i]}" | bc`
    ### Get the configuration file location for this PHP-FPM pool
-   config_file_location=`grep "\[${list_of_pools[$i]}\]" $pool_directory | cut -d: -f1`
+   #config_file_location=`grep "\[${list_of_pools[$i]}\]" $pool_directory | cut -d: -f1`
    ### Get the current max_children value for this PHP-FPM pool
-   current_max_children_value=`grep "^pm.max_children" $config_file_location | cut -d= -f2 | sed -e 's/ //g'`
+   #current_max_children_value=`grep "^pm.max_children" $config_file_location | cut -d= -f2 | sed -e 's/ //g'`
+   current_max_children_value=`grep "^pm.max_children" ${pool_config_file[$i]} | cut -d= -f2 | sed -e 's/ //g'`
    ### Print out all this information
-   echo -e "\e[36m\e[1m-- ${list_of_pools[$i]} --\e[0m currently uses ${total_pool_mem_usage[$i]} KB memory (\e[33m${pool_perc_mem_use[$i]}%\e[0m of all PHP-FPM memory usage). It should be allowed to use about ${pool_allowed_mem_use[$i]} KB of all available memory. Its average process size is ${pool_ave_process_size[$i]} KB so this means \e[38;5;208mmax_children should be set to ~\e[1m${pool_allowed_max_children[$i]}\e[0m. It is currently set to $current_max_children_value (this can be changed in $config_file_location)."
+   echo -e "\e[36m\e[1m-- ${list_of_pools[$i]} --\e[0m currently uses ${total_pool_mem_usage[$i]} KB memory (\e[33m${pool_perc_mem_use[$i]}%\e[0m of all PHP-FPM memory usage). It should be allowed to use about ${pool_allowed_mem_use[$i]} KB of all available memory. Its average process size is ${pool_ave_process_size[$i]} KB so this means \e[38;5;208mmax_children should be set to ~\e[1m${pool_allowed_max_children[$i]}\e[0m. It is currently set to $current_max_children_value (this can be changed in ${pool_config_file[$i]})."
 done
 
 echo
