@@ -55,7 +55,7 @@ if [ $? != 0 ]; then
 fi
 
 
-### Get list of all PHP-FPM pools from proces list
+### Get list of all PHP-FPM pools from process list
 IFS=$'\n' list_of_pools=($(ps aux | grep "php-fpm" | grep -v ^root | grep -v grep | awk -F "pool " '{print $2}' | sort | uniq | sed -e 's/ //g'))
 
 ### Get total server memory
@@ -110,11 +110,12 @@ do
    echo -n "Configuration file: "; echo `grep -H "\[${list_of_pools[$i]}\]" ${pool_config_file[$i]} | cut -d: -f1`
 
    ### Create a list of process IDs that belong to this pool
-   if [ $fpm_type == "php-fpm" ]; then ### For RHEL/CentOS release use this command
-      IFS=$'\n' list_of_pids=($(ps aux | grep "php-fpm" | grep -v ^root | grep -v grep | grep "pool ${list_of_pools[$i]}$" | awk '{print $2}'))
-   elif [ $fpm_type == "php5-fpm" ]; then ### Ubuntu/PHP5-FPM nuance in ps output
-      IFS=$'\n' list_of_pids=($(ps aux | grep "php-fpm" | grep -v ^root | grep -v grep | grep "pool ${list_of_pools[$i]} " | awk '{print $2}'))
-   fi
+   #if [ $fpm_type == "php-fpm" ]; then ### For RHEL/CentOS release use this command
+      IFS=$'\n' list_of_pids=($(ps aux | grep "php-fpm" | grep -v ^root | grep -v grep | grep pool | awk '{print $2, $13}' | grep "${list_of_pools[$i]}$" | awk '{print $1}'))
+   #   IFS=$'\n' list_of_pids=($(ps aux | grep "php-fpm" | grep -v ^root | grep -v grep | grep "pool ${list_of_pools[$i]}$" | awk '{print $2}'))
+   #elif [ $fpm_type == "php5-fpm" ]; then ### Ubuntu/PHP5-FPM nuance in ps output
+   #   IFS=$'\n' list_of_pids=($(ps aux | grep "php-fpm" | grep -v ^root | grep -v grep | grep "pool ${list_of_pools[$i]} " | awk '{print $2}'))
+   #fi
 
    ### List all process IDs that belong to this pool
    echo -n "List of processes: "
