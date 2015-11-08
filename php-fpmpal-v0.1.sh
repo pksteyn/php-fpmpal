@@ -16,21 +16,46 @@ for i in {17..21} {21..21} {21..21} {21..21} {20..16} ; do echo -en "\e[38;5;${i
 echo -e "\e[0m"
 echo
 
-#echo
-#echo -e "\e[38;5;3m (        )  (         (     (       *                      "
-#echo -e "\e[33m\e[1m )\ )  ( /(  )\ )      )\ )  )\ )  (  \`                 (   "
-#echo -e "\e[38;5;214m(()/(  )\())(()/(     (()/( (()/(  )\))(             )  )\  "
-#echo -e "\e[38;5;208m /(_))((_)\  /(_))     /(_)) /(_))((_)()\  \`  )   ( /( ((_) "
-#echo -e "\e[38;5;124m(_))   _((_)(_))      (_))_|(_))  (_()((_) /(/(   )(_)) _   "
-#echo -e "\e[0m\e[38;5;21m| _ \ | || || _ \ ___ | |_  | _ \ |  \/  |\e[38;5;88m\e[1m((_)_\ ((_)\e[0m\e[38;5;21m_ | |  "
-#echo -ne "|  _/ | __ ||  _/|___|| __| |  _/ | |\/| || '_ \\"
-#echo -e "\e[38;5;52m\e[1m)\e[0m\e[38;5;21m/ _\` || |  "
-#echo -e "|_|   |_||_||_|       |_|   |_|   |_|  |_|| .__/ \__,_||_|  "
-#for i in {17..21} {21..17} {17..21} {21..17} {17..21} {21..17} {17..21} {21..17} {17..17} ; do echo -en "\e[38;5;${i}m=\e[0m" ; done
-#echo -en "\e[38;5;21m |_| "
-#for i in {17..21} {21..21} {21..21} {21..21} {20..16} ; do echo -en "\e[38;5;${i}m=\e[0m" ; done
-#echo -e "\e[0m"
-#echo
+### Determine whether the PHP-FPM process is called php-fpm or php5-fpm
+phpfpm_installed=0
+
+php-fpm -v 1> /dev/null 2>&1
+if [ $? == 0 ]; then
+   phpfpm_installed=1
+   fpm_type=`php-fpm -i 2>&1 | grep "SERVER\[\"_\"\]" | cut -d\/ -f4`
+#   fpm_type="php-fpm"
+fi
+
+php5-fpm -v 1> /dev/null 2>&1
+if [ $? == 0 ]; then
+   phpfpm_installed=1
+   fpm_type=`php5-fpm -i 2>&1 | grep "SERVER\[\"_\"\]" | cut -d\/ -f4`
+#   fpm_type="php5-fpm"
+fi
+
+### Exit if PHP-FPM is not installed
+if [ $phpfpm_installed == 0 ]; then
+   echo -e "\e[31m!!! PHP-FPM not detected. Exiting. !!!\e[0m"
+   echo
+   exit 1
+fi
+
+### Check if PHP-FPM is running
+ps aux | grep "php-fpm" | grep -v grep |  grep -v "php-fpmpal" 1> /dev/null 2>&1
+if [ $? == 1 ]; then
+   echo -e "\e[31m!!! PHP-FPM is installed but not running. PHP-FPM should be started before running this script. Exiting. !!!\e[0m"
+   echo
+   exit 1
+fi
+
+### Exit if bc is not installed
+bc -v 1> /dev/null 2>&1
+if [ $? != 0 ]; then
+   echo -e "\e[31m\"bc\" is not installed. This script depends on it. Exiting. \e[0m"
+   echo
+   exit 1
+fi
+
 
 ### Get list of all PHP-FPM pools from proces list
 IFS=$'\n' list_of_pools=($(ps aux | grep "php-fpm" | grep -v ^root | grep -v grep | awk -F "pool " '{print $2}' | sort | uniq | sed -e 's/ //g'))
@@ -52,92 +77,22 @@ let no_of_pools=(${#list_of_pools[@]}-1)
 
 
 ### Get list of possible configuration files
-#echo "List of includes"
 IFS=$'\n' list_of_includes=($(grep -i ^include `ps aux | egrep "php.*master" | grep -v grep | cut -d\( -f2 | cut -d\) -f1` | cut -d= -f2))
-#echo ${list_of_includes[*]}
-#echo "end of list"
 
 ### Set total number of include files
 let no_of_includes=(${#list_of_includes[@]}-1)
 
 ### Match each pool to its configuration file
-#echo "List of pools"
-#echo ${list_of_pools[*]}
-
-#echo "Matching pools to configuration files"
-# For each pool
-#for p in "${list_of_pools[@]}"
 for ((p=0; p<=no_of_pools; p++))
 do
-   #echo -n "Pool: "
-   #echo ${list_of_pools[$p]}
-   # For each include file
-   #for i in "${list_of_includes[@]}"
    for ((i=0; i<=no_of_includes; i++ ))
    do
-      #echo -n "   config file that I'm checking: "
-      #echo ${list_of_includes[$i]}
-      #echo "grep \"\[${list_of_pools[$p]}\]\" ${list_of_includes[$i]}"
-      #result=`grep "\[${list_of_pools[$p]}\]" ${list_of_includes[$i]}` > /dev/null
       grep "\[${list_of_pools[$p]}\]" ${list_of_includes[$i]} > /dev/null
-      #echo $result
       if [ $? == 0 ]; then
-         #echo $?
-         #IFS=$'\n' pool_config_file[$p]=${list_of_includes[$i]}
          pool_config_file[$p]="${list_of_includes[$i]}"
-         #pool_config_file[$p]="whaaat"
-         #echo -n "       I've found a matching pool file and it's called: "
-         #echo ${pool_config_file[$p]}
       fi
    done
 done
-
-#echo "END OF MATCHING"
-
-
-########################
-
-
-
-
-
-### Determine whether the PHP-FPM process is called php-fpm or php5-fpm, and set the pool directory accordingly
-pool_directory=""
-
-php-fpm -v 1> /dev/null 2>&1
-if [ $? == 0 ]; then
-   pool_directory="/etc/php-fpm.d/*.conf"
-   fpm_type="php-fpm"
-fi
-
-php5-fpm -v 1> /dev/null 2>&1
-if [ $? == 0 ]; then
-   pool_directory="/etc/php5/fpm/pool.d/*.conf"
-   fpm_type="php5-fpm"
-fi
-
-### Exit if PHP-FPM is not installed
-if [ -z "$pool_directory" ]; then
-   echo -e "\e[31m!!! PHP-FPM not detected. Exiting. !!!\e[0m"
-   echo
-   exit 1
-fi
-
-### Check if PHP-FPM is running
-ps aux | grep "php-fpm" | grep -v grep |  grep -v "php-fpmpal" 1> /dev/null 2>&1
-if [ $? == 1 ]; then
-   echo -e "\e[31m!!! PHP-FPM is installed but not running. PHP-FPM should be started before running this script. Exiting. !!!\e[0m"
-   echo
-   exit 1
-fi
-
-### Exit if bc is not installed
-bc -v 1> /dev/null 2>&1
-if [ $? != 0 ]; then
-   echo -e "\e[31m\"bc\" is not installed. This script depends on it. Exiting. \e[0m"
-   echo 
-   exit 1
-fi
 
 
 ### Give info re all list of PHP-FPM pools
@@ -154,7 +109,6 @@ do
    echo -en "\e[36m\e[1m--- "
    echo -en ${list_of_pools[$i]}
    echo -e " ---\e[0m"
-   #echo -n "Configuration file: "; echo `grep "\[${list_of_pools[$i]}\]" $pool_directory | cut -d: -f1`
    echo -n "Configuration file: "; echo `grep -H "\[${list_of_pools[$i]}\]" ${pool_config_file[$i]} | cut -d: -f1`
 
    ### Create a list of process IDs that belong to this pool
@@ -174,8 +128,6 @@ do
 
    ### Get the current max_children value
    echo -n "Current max_children value: "
-   #config_file_location=`grep "\[${list_of_pools[$i]}\]" $pool_directory | cut -d: -f1`
-   #current_max_children_value=`grep "^pm.max_children" $config_file_location | cut -d= -f2 | sed -e 's/ //g'`
    current_max_children_value=`grep "^pm.max_children" ${pool_config_file[$i]} | cut -d= -f2 | sed -e 's/ //g'`
    echo $current_max_children_value
 
@@ -221,15 +173,6 @@ do
 
    echo
 done
-
-### Print out total potential PHP-FPM usage based on largest process size per pool
-#   echo -n "Total potential PHP-FPM memory usage based on largest processes (KB): "
-#   echo $total_phpfpm_mem_usage_largest_process
-### Print out total potential PHP-FPM usage based on largest process size per pool
-#   echo -n "Total potential PHP-FPM memory usage based on average process size (KB): "
-#   echo $total_phpfpm_mem_usage_average_process
-#   echo
-
 
 ### END OF Give info re all list of PHP-FPM pools
 ### =============================================
@@ -380,10 +323,7 @@ do
    pool_allowed_mem_use[$i]=`echo "$total_phpfpm_allowed_memory * ${pool_perc_mem_use[$i]} / 100" | bc`
    ### Divide the average process size for this pool by the total "allowed" memory usage for this pool to get a recommended max_children value
    pool_allowed_max_children[$i]=`echo "${pool_allowed_mem_use[$i]} / ${pool_ave_process_size[$i]}" | bc`
-   ### Get the configuration file location for this PHP-FPM pool
-   #config_file_location=`grep "\[${list_of_pools[$i]}\]" $pool_directory | cut -d: -f1`
    ### Get the current max_children value for this PHP-FPM pool
-   #current_max_children_value=`grep "^pm.max_children" $config_file_location | cut -d= -f2 | sed -e 's/ //g'`
    current_max_children_value=`grep "^pm.max_children" ${pool_config_file[$i]} | cut -d= -f2 | sed -e 's/ //g'`
    ### Print out all this information
    echo -e "\e[36m\e[1m-- ${list_of_pools[$i]} --\e[0m currently uses ${total_pool_mem_usage[$i]} KB memory (\e[33m${pool_perc_mem_use[$i]}%\e[0m of all PHP-FPM memory usage). It should be allowed to use about ${pool_allowed_mem_use[$i]} KB of all available memory. Its average process size is ${pool_ave_process_size[$i]} KB so this means \e[38;5;208mmax_children should be set to ~\e[1m${pool_allowed_max_children[$i]}\e[0m. It is currently set to $current_max_children_value (this can be changed in ${pool_config_file[$i]})."
