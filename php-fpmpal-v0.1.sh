@@ -23,14 +23,12 @@ php-fpm -v 1> /dev/null 2>&1
 if [ $? == 0 ]; then
    phpfpm_installed=1
    fpm_type=`php-fpm -i 2>&1 | grep "SERVER\[\"_\"\]" | cut -d\/ -f4`
-#   fpm_type="php-fpm"
 fi
 
 php5-fpm -v 1> /dev/null 2>&1
 if [ $? == 0 ]; then
    phpfpm_installed=1
    fpm_type=`php5-fpm -i 2>&1 | grep "SERVER\[\"_\"\]" | cut -d\/ -f4`
-#   fpm_type="php5-fpm"
 fi
 
 ### Exit if PHP-FPM is not installed
