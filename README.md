@@ -1,8 +1,7 @@
 # php-fpmpal
 Bash script script that makes recommendations on max_children for each PHP-FPM pool on a server.
 
-What the script does is:
-
+What the main script (php-fpmpal.sh) does is:
 * identify all PHP-FPM pools on a server and the average memory usage
 per process for each pool
 * classify how much of the overall PHP-FPM memory each pool uses (e.g.
@@ -13,3 +12,26 @@ use as a whole
 each pool
 * works out the max_children setting for each pool based on it's
 "allocated" memory and the average process size for the pool
+
+Cron job (cron.sh):
+* will catch various PHP-FPM pool stats and keep a set number of copies
+* saves stats to "/var/log/php-fpmpal/" by default
+* to setup cronjob creat the following file:
+
+# cat /etc/cron.d/php-fpmpal-stats-capture
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+*/10 * * * * root /bin/bash /path/to/cron.sh
+#
+
+Cron job interpreter (interpretcron.sh):
+* can be used to print out various types of reports using stats captured in PHP-FPM cronjob
+* run the following to get help on usage:
+# ./interpretcron.sh --help
+
+Usage: interpretcron.sh [OPTION]
+
+Arguments:
+  -ms                   For each logfile in /var/log/php-fpmpal show the total memory usage per PHP-FPM pool
+  -msl [FILENAME]       Show the total memory usage per PHP-FPM pool for this logfile
