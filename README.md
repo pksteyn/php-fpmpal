@@ -16,23 +16,21 @@ each pool
 Cron job (cron.sh):
 * will catch various PHP-FPM pool stats and keep a set number of copies
 * saves stats to "/var/log/php-fpmpal/" by default
-* to setup cronjob create the following file:
-
-~~~ /etc/cron.d/php-fpmpal-stats-capture ~~~
+* to setup cronjob create the file "/etc/cron.d/php-fpmpal-stats-capture" with content:
+---
 SHELL=/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 */10 * * * * root /bin/bash /path/to/cron.sh
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+---
 
 Cron job interpreter (interpretcron.sh):
 * can be used to print out various types of reports using stats captured in PHP-FPM cronjob
 * run "./interpretcron.sh --help" to get help on usage:
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+---
 Usage: interpretcron.sh [OPTION]
 
 Arguments:
   -ms                   For each logfile in /var/log/php-fpmpal show the total memory usage per PHP-FPM pool
   -msl [FILENAME]       Show the total memory usage per PHP-FPM pool for this logfile
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+---
