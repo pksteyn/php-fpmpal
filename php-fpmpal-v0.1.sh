@@ -269,7 +269,15 @@ echo -n "Memory available to assign to PHP-FPM pools in KB: "
    #total_phpfpm_allowed_memory=`echo "$total_server_memory - ($total_apache_pool_mem_usage + $total_mysql_pool_mem_usage + $total_varnish_mem_usage)" | bc`
 
    ### Take total free memory and add current PHP-FPM total memory usage
-   total_phpfpm_allowed_memory=$(echo "`free -k | awk '/buffers\/cache/ {print $4}'` + $total_phpfpm_mem_usage" | bc)
+   # RHEL 7's free reports look different to CentOS6, Ubuntu 14 and Debian 8 so I have to 1) check whether this is RHEL/CentOS 7, and 2) if it is, use different formulas
+   rhel7_check=`cat /etc/redhat-release | awk -F "release" '{print $2}' | awk '{print $1}' | cut -d. -f1`
+   # If this is RHEL 7 then use this formula
+   if [ $rhel7_check == '7' ]; then
+      total_phpfpm_allowed_memory=$(echo "`free -k | awk '/Mem/ {print $7}'` + $total_phpfpm_mem_usage" | bc)
+   # If this is not RHEL 7 use this formula
+   else
+      total_phpfpm_allowed_memory=$(echo "`free -k | awk '/buffers\/cache/ {print $4}'` + $total_phpfpm_mem_usage" | bc)
+   fi
 echo $total_phpfpm_allowed_memory
 
 ### Print total current PHP-FPM memory usage
