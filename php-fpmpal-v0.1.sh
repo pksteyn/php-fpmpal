@@ -262,6 +262,10 @@ ps aux | grep -v ^root | grep mysql > /dev/null
    fi
 echo $total_mysql_pool_mem_usage
 
+### Print total current PHP-FPM memory usage
+echo -n "  =Total PHP-FPM memory usage in KB: "
+echo $total_phpfpm_mem_usage
+
 echo
 ### Calculate total memory that would be available for PHP-FPM to use by subtracting memory usage from all other processes from the server's total memory
 echo -n "Memory available to assign to PHP-FPM pools in KB: "
@@ -270,7 +274,10 @@ echo -n "Memory available to assign to PHP-FPM pools in KB: "
 
    ### Take total free memory and add current PHP-FPM total memory usage
    # RHEL 7's free reports look different to CentOS6, Ubuntu 14 and Debian 8 so I have to 1) check whether this is RHEL/CentOS 7, and 2) if it is, use different formulas
-   rhel7_check=`cat /etc/redhat-release | awk -F "release" '{print $2}' | awk '{print $1}' | cut -d. -f1`
+   rhel7_check=0
+   if [ -f /etc/redhat-release ]; then
+      rhel7_check=`cat /etc/redhat-release | awk -F "release" '{print $2}' | awk '{print $1}' | cut -d. -f1` > /dev/null
+   fi
    # If this is RHEL 7 then use this formula
    if [ $rhel7_check == '7' ]; then
       total_phpfpm_allowed_memory=$(echo "`free -k | awk '/Mem/ {print $7}'` + $total_phpfpm_mem_usage" | bc)
@@ -278,12 +285,8 @@ echo -n "Memory available to assign to PHP-FPM pools in KB: "
    else
       total_phpfpm_allowed_memory=$(echo "`free -k | awk '/buffers\/cache/ {print $4}'` + $total_phpfpm_mem_usage" | bc)
    fi
-echo $total_phpfpm_allowed_memory
-
-### Print total current PHP-FPM memory usage
-echo -n "(Current total PHP-FPM memory usage in KB: "
-echo -n $total_phpfpm_mem_usage
-echo ")"
+echo -n $total_phpfpm_allowed_memory
+echo " (total free memory + PHP-FPM's current memory usage)"
 echo
 
 ### Print out total potential PHP-FPM usage based on largest process size per pool
@@ -293,7 +296,7 @@ echo
    echo -n "%)"
    # Print warning if this is larger than allowed PHP-FPM memory usage
    if [ $total_phpfpm_mem_usage_largest_process -gt $total_phpfpm_allowed_memory ]; then
-      echo -e " \e[31m!!! THIS IS LARGER THAN THE ALLOWED MEMORY USAGE !!!\e[0m"
+      echo -e " \e[31m!!! THIS IS LARGER THAN THE ASSIGNED MEMORY USAGE !!!\e[0m"
    else
       echo -e " \e[32m...GOOD :-)\e[0m"
    fi
@@ -305,7 +308,7 @@ echo
    echo -n "%)"
    # Print warning if this is larger than allowed PHP-FPM memory usage
    if [ $total_phpfpm_mem_usage_average_process -gt $total_phpfpm_allowed_memory ]; then
-      echo -e " \e[31m!!! THIS IS LARGER THAN THE ALLOWED MEMORY USAGE !!!\e[0m"
+      echo -e " \e[31m!!! THIS IS LARGER THAN THE ASSIGNED MEMORY USAGE !!!\e[0m"
    else
       echo -e " \e[32m...GOOD :-)\e[0m"   
    fi
