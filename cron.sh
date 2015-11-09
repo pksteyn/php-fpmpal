@@ -5,6 +5,7 @@ copies_to_keep=144
 
 # Log location and filename
 logdirectory="/var/log/php-fpmpal/"
+mkdir -p $logdirectory
 
 # Log file name
 logfile_name=$logdirectory`date "+%Y.%m.%d_%H:%M:%S"`
