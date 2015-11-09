@@ -26,6 +26,7 @@ PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 
 
+
 3) Cron job interpreter (interpretcron.sh):
 * can be used to print out various types of reports using stats captured in PHP-FPM cronjob
 * run "./interpretcron.sh --help" to get help on usage:
