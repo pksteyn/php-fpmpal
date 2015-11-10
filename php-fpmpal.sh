@@ -352,10 +352,19 @@ echo -en "\e[38;5;22m=\e[38;5;28m=\e[38;5;34m=\e[38;5;40m=\e[38;5;46m="
 echo -en "\e[32m\e[1m Other considerations to take into account \e[0m"
 echo -e "\e[38;5;46m=\e[38;5;40m=\e[38;5;34m=\e[38;5;28m=\e[38;5;22m=\e[0m"
 
-echo "From the PHP-FPM error logfiles -"
-zgrep "server reached pm.max_children" /var/log/php-fpm/error.lo* | awk '{print $5, $10}' | sed -e 's/[(),]//g' | sed -e 's/\]//g' | sort | uniq -c | awk '{print " - pool \033[36m" $2 "\033[0m had reached its max_children value of " $3 " on " $1 " occasion(s)"}'
-echo
-echo "For these pools you may want to compare the recommended max_children value to this information, and decide whether recommended value would be high enough to prevent max_children from being hit in future."
+if [ -f /var/log/php-fpm/error.log ]; then
+   echo "From the PHP-FPM error logfiles -"
+   zgrep "server reached pm.max_children" /var/log/php-fpm/error.lo* | awk '{print $5, $10}' | sed -e 's/[(),]//g' | sed -e 's/\]//g' | sort | uniq -c | awk '{print " - pool \033[36m" $2 "\033[0m had reached its max_children value of " $3 " on " $1 " occasion(s)"}'
+   echo
+   echo "For these pools you may want to compare the recommended max_children value to this information, and decide whether recommended value would be high enough to prevent max_children from being hit in future."
+elif [ -f /var/log/php5-fpm.log ]; then
+   echo "From the PHP-FPM error logfiles -"
+   zgrep "server reached pm.max_children" /var/log/php5-fpm.lo* | awk '{print $5, $10}' | sed -e 's/[(),]//g' | sed -e 's/\]//g' | sort | uniq -c | awk '{print " - pool \033[36m" $2 "\033[0m had reached its max_children value of " $3 " on " $1 " occasion(s)"}'
+   echo
+   echo "For these pools you may want to compare the recommended max_children value to this information, and decide whether recommended value would be high enough to prevent max_children from being hit in future."
+else
+   echo "No other recommendations at this stage."
+fi
 
 echo
 
