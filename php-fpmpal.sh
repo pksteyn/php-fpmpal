@@ -1,5 +1,27 @@
 #! /bin/bash
 
+
+### Switches
+function usage()
+{
+        echo
+        echo "Usage: php-fpmpal.sh [OPTION]"
+        echo
+        echo "Arguments:"
+        echo "  -MB [VALUE]		Specify how much memory (in MB) you would like the whole of PHP-FPM to be able to use and base the calculations on this value, rather than on the value worked out by the script"
+        echo
+}
+
+if [ $# != 0 ]; then
+   if [ $1 == "--help" ]; then
+      usage
+      exit 0
+   fi
+fi
+### END OF switches
+
+
+### Print logo
 echo
 echo -e "\e[38;5;81m (        )  (         (     (       *                      "
 echo -e "\e[38;5;51m\e[1m )\ )  ( /(  )\ )      )\ )  )\ )  (  \`           \e[33m\e[1m      (   "
@@ -274,6 +296,12 @@ echo -n "Memory available to assign to PHP-FPM pools in KB: "
 
    ### Take total free memory and add current PHP-FPM total memory usage
    # RHEL 7's free reports look different to CentOS6, Ubuntu 14 and Debian 8 so I have to 1) check whether this is RHEL/CentOS 7, and 2) if it is, use different formulas
+
+# If the user has specified that they will set the available PHP-FPM memory themselves
+#if [ $1 == "-MB" ]; then
+#   total_phpfpm_allowed_memory=`echo "$2*1024" | bc`
+# If the user hasn't specified this value then calculate a value
+#else
    rhel7_check=0
    if [ -f /etc/redhat-release ]; then
       rhel7_check=`cat /etc/redhat-release | awk -F "release" '{print $2}' | awk '{print $1}' | cut -d. -f1` > /dev/null
@@ -285,8 +313,21 @@ echo -n "Memory available to assign to PHP-FPM pools in KB: "
    else
       total_phpfpm_allowed_memory=$(echo "`free -k | awk '/buffers\/cache/ {print $4}'` + $total_phpfpm_mem_usage" | bc)
    fi
-echo -n $total_phpfpm_allowed_memory
-echo " (total free memory + PHP-FPM's current memory usage)"
+#fi
+
+# If the user has specified that they will set the available PHP-FPM memory themselves
+if [ $# != 0 ]; then
+   # then print out user-specified value
+   if [ $1 == "-MB" ]; then
+      total_phpfpm_allowed_memory=`echo "$2*1024" | bc`
+      echo -n $total_phpfpm_allowed_memory
+      echo " (user-specified)"
+   fi
+# Otherwise print out script-calculate value
+else
+   echo -n $total_phpfpm_allowed_memory
+   echo " (total free memory + PHP-FPM's current memory usage)"
+fi
 echo
 
 ### Print out total potential PHP-FPM usage based on largest process size per pool
@@ -367,8 +408,8 @@ if [ $errors_in_logs != 0 ]; then
    echo
    echo "For these pools you may want to compare the recommended max_children value to this information, and decide whether the recommended value would be high enough to prevent max_children from being hit in future."
 # Else print that there are no further recommendations
-else
-   echo "No other recommendations at this stage."
+#else
+#   echo "No other recommendations at this stage."
 fi
 
 # PHP-FPMpal usage
