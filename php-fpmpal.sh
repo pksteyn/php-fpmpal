@@ -370,6 +370,12 @@ if [ $errors_in_logs != 0 ]; then
 else
    echo "No other recommendations at this stage."
 fi
+
+# PHP-FPMpal usage
+echo
+echo "Note: It is not ideal to run PHP-FPMpal shortly after restarting PHP-FPM or your webservices. This is because PHP-FPMpal makes recommendations based on the average pool process size, and if PHP-FPM was restarted a short while ago then the likelihood is high that there won't have been many requests made to the sites since the restart, and metrics will be skewed and not show a normalised average."
+echo "It is also worth noting that if you've recently restarted any services that normally use up a large amount of memory then you probably want to wait a while before running PHP-FPMpal (e.g. if MySQL normally uses 50% of memory, but you've just restarted it then it may only use 10% of memory right now, thus the recommendations will be very skewed)."
+
 echo
 ### END OF Other considerations
 ### ===========================
