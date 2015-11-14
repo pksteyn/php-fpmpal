@@ -1,5 +1,24 @@
 #! /bin/bash
 
+### Switches
+function usage()
+{
+        echo
+        echo "Usage: php-fpmpal.sh [OPTION]"
+        echo
+        echo "Arguments:"
+        echo "  -MB [VALUE]             Specify how much memory (in MB) you would like the whole of PHP-FPM to be able to use and base the calculations on this value, rather than on the value worked out by the script"
+        echo
+}
+
+if [ $# != 0 ]; then
+   if [ $1 == "--help" ]; then
+      usage
+      exit 0
+   fi
+fi
+### END OF switches
+
 echo
 echo -e "\e[38;5;81m (        )  (         (     (       *                      "
 echo -e "\e[38;5;51m\e[1m )\ )  ( /(  )\ )      )\ )  )\ )  (  \`           \e[33m\e[1m      (   "
@@ -65,11 +84,6 @@ httpd_root_and_config_file=$httpd_root"/"$httpd_config_file
 # Apache Includes (only 1 level deep from main configuration file)
 httpd_main_include=`awk -v var="$httpd_root"  '/^Include/ {print var "/" $2}' $httpd_root_and_config_file`
 IFS=$'\n' list_of_apache_includes=($(ls $httpd_main_include))
-
-
-
-
-
 
 ### Get list of all PHP-FPM pools from process list
 IFS=$'\n' list_of_pools=($(ps aux | grep "php-fpm" | grep -v ^root | grep -v grep | awk -F "pool " '{print $2}' | sort | uniq | sed -e 's/ //g'))
@@ -159,19 +173,7 @@ fi
    
 
    ### Create a list of process IDs that belong to this pool
-   #if [ $fpm_type == "php-fpm" ]; then ### For RHEL/CentOS release use this command
-
-   #IFS=$'\n' list_of_pids=($( ps aux | grep "php-fpm" | grep -v ^root | grep -v grep | grep pool | awk '{print $13, $2}' | grep "^${list_of_pools[$i]}" | awk '{print $2, $1}' | grep "${list_of_pools[$i]}$" | awk '{print $1}'))
-
-   #IFS=$'\n' list_of_pids=($(ps aux | grep "php-fpm" | grep -v ^root | grep -v grep | grep pool | awk '{print $13, $2}' | grep "^${list_of_pools[$i]}" | awk '{print $2}'))
-
-      IFS=$'\n' list_of_pids=($(ps aux | grep "php-fpm" | grep -v ^root | grep -v grep | grep pool | awk '{print $2, $13}' | grep "${list_of_pools[$i]}$" | awk '{print $1}'))
-
-
-   #   IFS=$'\n' list_of_pids=($(ps aux | grep "php-fpm" | grep -v ^root | grep -v grep | grep "pool ${list_of_pools[$i]}$" | awk '{print $2}'))
-   #elif [ $fpm_type == "php5-fpm" ]; then ### Ubuntu/PHP5-FPM nuance in ps output
-   #   IFS=$'\n' list_of_pids=($(ps aux | grep "php-fpm" | grep -v ^root | grep -v grep | grep "pool ${list_of_pools[$i]} " | awk '{print $2}'))
-   #fi
+   IFS=$'\n' list_of_pids=($(ps aux | grep "php-fpm" | grep -v ^root | grep -v grep | grep pool | awk '{print $2, $13}' | grep "${list_of_pools[$i]}$" | awk '{print $1}'))
 
    ### List all process IDs that belong to this pool
    echo -n "List of processes: "
@@ -323,11 +325,10 @@ echo -n "  =Total PHP-FPM memory usage in KB: "
 echo $total_phpfpm_mem_usage
 
 echo
-### Calculate total memory that would be available for PHP-FPM to use by subtracting memory usage from all other processes from the server's total memory
+
+# Calculate total memory available to assign to PHP-FPM
 echo -n "Memory available to assign to PHP-FPM pools in KB: "
    ### Total memory usage - (the sum of all other processes listed above)
-   #total_phpfpm_allowed_memory=`echo "$total_server_memory - ($total_apache_pool_mem_usage + $total_mysql_pool_mem_usage + $total_varnish_mem_usage)" | bc`
-
    ### Take total free memory and add current PHP-FPM total memory usage
    # RHEL 7's free reports look different to CentOS6, Ubuntu 14 and Debian 8 so I have to 1) check whether this is RHEL/CentOS 7, and 2) if it is, use different formulas
    rhel7_check=0
@@ -341,9 +342,21 @@ echo -n "Memory available to assign to PHP-FPM pools in KB: "
    else
       total_phpfpm_allowed_memory=$(echo "`free -k | awk '/buffers\/cache/ {print $4}'` + $total_phpfpm_mem_usage" | bc)
    fi
-echo -n $total_phpfpm_allowed_memory
-echo " (total free memory + PHP-FPM's current memory usage)"
+# If the user has specified that they will set the available PHP-FPM memory themselves
+if [ $# != 0 ]; then
+   # then print out user-specified value
+   if [ $1 == "-MB" ]; then
+      total_phpfpm_allowed_memory=`echo "$2*1024" | bc`
+      echo -n $total_phpfpm_allowed_memory
+      echo " (user-specified)"
+   fi
+# Otherwise print out script-calculate value
+else
+   echo -n $total_phpfpm_allowed_memory
+   echo " (total free memory + PHP-FPM's current memory usage)"
+fi
 echo
+
 
 ### Print out total potential PHP-FPM usage based on largest process size per pool
    echo -n "Total potential PHP-FPM memory usage based on largest processes (KB): "
