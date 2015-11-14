@@ -165,6 +165,9 @@ if [ 0 == 1 ]; then
    vhost_start_line=`grep -B1 $action_line_nr filelist | head -1`
    vhost_end_line=`grep -A1 $action_line_nr filelist | tail -1`
 
+   rm -rf filelist
+   rm -rf temp_filelist
+
    echo -n "Site(s) that rely on this pool: "
    site_name=`sed -n "$vhost_start_line,$vhost_end_line p" $vhost_name | grep ServerName | awk '{print $2}'`
    echo -e "\e[36m$site_name\e[0m"
