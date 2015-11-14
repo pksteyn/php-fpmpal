@@ -183,11 +183,11 @@ fi
    ### Create a list of process IDs that belong to this pool
    #if [ $fpm_type == "php-fpm" ]; then ### For RHEL/CentOS release use this command
 
-   IFS=$'\n' list_of_pids=($( ps aux | grep "php-fpm" | grep -v ^root | grep -v grep | grep pool | awk '{print $13, $2}' | grep "^${list_of_pools[$i]}" | awk '{print $2, $1}' | grep "${list_of_pools[$i]}$" | awk '{print $1}'))
+   #IFS=$'\n' list_of_pids=($( ps aux | grep "php-fpm" | grep -v ^root | grep -v grep | grep pool | awk '{print $13, $2}' | grep "^${list_of_pools[$i]}" | awk '{print $2, $1}' | grep "${list_of_pools[$i]}$" | awk '{print $1}'))
 
    #IFS=$'\n' list_of_pids=($(ps aux | grep "php-fpm" | grep -v ^root | grep -v grep | grep pool | awk '{print $13, $2}' | grep "^${list_of_pools[$i]}" | awk '{print $2}'))
 
-   #   IFS=$'\n' list_of_pids=($(ps aux | grep "php-fpm" | grep -v ^root | grep -v grep | grep pool | awk '{print $2, $13}' | grep "${list_of_pools[$i]}$" | awk '{print $1}'))
+      IFS=$'\n' list_of_pids=($(ps aux | grep "php-fpm" | grep -v ^root | grep -v grep | grep pool | awk '{print $2, $13}' | grep "${list_of_pools[$i]}$" | awk '{print $1}'))
 
 
    #   IFS=$'\n' list_of_pids=($(ps aux | grep "php-fpm" | grep -v ^root | grep -v grep | grep "pool ${list_of_pools[$i]}$" | awk '{print $2}'))
