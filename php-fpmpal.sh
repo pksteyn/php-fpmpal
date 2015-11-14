@@ -77,6 +77,22 @@ if [ $? != 0 ]; then
 fi
 
 
+### VARIABLE INITIALISATION
+
+# Apache root and config file
+httpd_root=`apachectl -V | awk -F "\"" '/HTTPD_ROOT/ {print $2}'`
+httpd_config_file=`apachectl -V | awk -F "\"" '/SERVER_CONFIG_FILE/ {print $2}'`
+httpd_root_and_config_file=$httpd_root"/"$httpd_config_file
+
+# Apache Includes (only 1 level deep from main configuration file)
+httpd_main_include=`awk -v var="$httpd_root"  '/^Include/ {print var "/" $2}' $httpd_root_and_config_file`
+IFS=$'\n' list_of_apache_includes=($(ls $httpd_main_include))
+
+
+
+
+
+
 ### Get list of all PHP-FPM pools from process list
 IFS=$'\n' list_of_pools=($(ps aux | grep "php-fpm" | grep -v ^root | grep -v grep | awk -F "pool " '{print $2}' | sort | uniq | sed -e 's/ //g'))
 
@@ -131,9 +147,49 @@ do
    echo -e " ---\e[0m"
    echo -n "Configuration file: "; echo `grep -H "\[${list_of_pools[$i]}\]" ${pool_config_file[$i]} | cut -d: -f1`
 
+
+if [ 1 == 0 ]; then
+   ### Find the site(s) that rely on this pool
+   # Find the socket/TCP listener for this pool
+   pool_listener=`egrep -i "^listen" ${pool_config_file[$i]} | sed -e 's/ //g' | grep "^listen=" | cut -d= -f2`
+ 
+   # Find the FastCGIExternalServer directive for this socket in the Apache configuration and get the "Alias/Action"
+   action_alias=`grep -h "FastCGIExternalServer" ${list_of_apache_includes[@]} | grep -v "#" | grep $pool_listener | awk '{print $2}'`
+
+   # Find the vhost file within which the "Alias/Action" is referenced
+   vhost_name=`grep -H $action_alias ${list_of_apache_includes[@]} | grep Alias | cut -d: -f1` 
+
+  # As there may be multiple vhosts in the file, we want to extract just the vhost within which the "Alias/Action" was referenced
+   echo "" > temp_filelist
+   echo "" > filelist
+
+   action_line_nr=`grep -hn $action_alias ${list_of_apache_includes[@]} | grep Alias | cut -d: -f1`
+   echo $action_line_nr >> temp_filelist
+
+   egrep -n "<VirtualHost|</VirtualHost" $vhost_name | grep -v "#" | cut -d: -f1 >> temp_filelist
+
+   sort -n temp_filelist > filelist
+
+   vhost_start_line=`grep -B1 $action_line_nr filelist | head -1`
+   vhost_end_line=`grep -A1 $action_line_nr filelist | tail -1`
+
+   echo -n "Site(s) that rely on this pool: "
+   site_name=`sed -n "$vhost_start_line,$vhost_end_line p" $vhost_name | grep ServerName | awk '{print $2}'`
+   echo -e "\e[36m$site_name\e[0m"
+fi
+   
+   
+
    ### Create a list of process IDs that belong to this pool
    #if [ $fpm_type == "php-fpm" ]; then ### For RHEL/CentOS release use this command
-      IFS=$'\n' list_of_pids=($(ps aux | grep "php-fpm" | grep -v ^root | grep -v grep | grep pool | awk '{print $2, $13}' | grep "${list_of_pools[$i]}$" | awk '{print $1}'))
+
+   IFS=$'\n' list_of_pids=($( ps aux | grep "php-fpm" | grep -v ^root | grep -v grep | grep pool | awk '{print $13, $2}' | grep "^${list_of_pools[$i]}" | awk '{print $2, $1}' | grep "${list_of_pools[$i]}$" | awk '{print $1}'))
+
+   #IFS=$'\n' list_of_pids=($(ps aux | grep "php-fpm" | grep -v ^root | grep -v grep | grep pool | awk '{print $13, $2}' | grep "^${list_of_pools[$i]}" | awk '{print $2}'))
+
+   #   IFS=$'\n' list_of_pids=($(ps aux | grep "php-fpm" | grep -v ^root | grep -v grep | grep pool | awk '{print $2, $13}' | grep "${list_of_pools[$i]}$" | awk '{print $1}'))
+
+
    #   IFS=$'\n' list_of_pids=($(ps aux | grep "php-fpm" | grep -v ^root | grep -v grep | grep "pool ${list_of_pools[$i]}$" | awk '{print $2}'))
    #elif [ $fpm_type == "php5-fpm" ]; then ### Ubuntu/PHP5-FPM nuance in ps output
    #   IFS=$'\n' list_of_pids=($(ps aux | grep "php-fpm" | grep -v ^root | grep -v grep | grep "pool ${list_of_pools[$i]} " | awk '{print $2}'))
