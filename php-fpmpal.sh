@@ -126,7 +126,7 @@ do
    echo -n "Configuration file: "; echo `grep -H "\[${list_of_pools[$i]}\]" ${pool_config_file[$i]} | cut -d: -f1`
 
 
-if [ 1 == 0 ]; then
+if [ 0 == 1 ]; then
    ### Find the site(s) that rely on this pool
    # Find the socket/TCP listener for this pool
    pool_listener=`egrep -i "^listen" ${pool_config_file[$i]} | sed -e 's/ //g' | grep "^listen=" | cut -d= -f2`
