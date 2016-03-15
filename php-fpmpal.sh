@@ -11,12 +11,36 @@ function usage()
         echo
 }
 
+
 if [ $# != 0 ]; then
    if [ $1 == "--help" ]; then
       usage
       exit 0
    fi
 fi
+
+### Check if the script is being run with root privileges
+if [ $EUID != "0" ]; then
+   echo "This script must be run as root" 1>&2
+   echo
+   echo
+   exit 1
+fi
+
+### Check if bc is installed
+bc -v 1> /dev/null 2>&1
+if [ $? != 0 ]; then
+   echo -e "\e[31m\"bc\" is not installed. This script depends on it.\e[0m"
+while true; do
+   read -p "Do you wish to install bc? (y/n)" yn
+   case $yn in
+      [Yy]* ) python -mplatform | egrep -i 'debian|ubuntu' 2>&1 > /dev/null && apt-get install bc -y -qq || yum install bc -y -q ; break;;
+      [Nn]* ) exit;;
+      * ) echo "Please answer yes or no.";;
+    esac
+done
+fi
+
 ### END OF switches
 
 echo
@@ -34,6 +58,8 @@ echo -en "\e[38;5;9m |_| "
 for i in {17..21} {21..21} {21..21} {21..21} {20..16} ; do echo -en "\e[38;5;${i}m=\e[0m" ; done
 echo -e "\e[0m"
 echo
+echo
+
 
 ### Determine whether the PHP-FPM process is called php-fpm or php5-fpm
 phpfpm_installed=0
@@ -65,26 +91,18 @@ if [ $? == 1 ]; then
    exit 1
 fi
 
-### Exit if bc is not installed
-bc -v 1> /dev/null 2>&1
-if [ $? != 0 ]; then
-   echo -e "\e[31m\"bc\" is not installed. This script depends on it. Exiting. \e[0m"
-   echo
-   exit 1
-fi
-
-
 ### VARIABLE INITIALISATION
 
 # Apache root and config file
-httpd_root=`apachectl -V | awk -F "\"" '/HTTPD_ROOT/ {print $2}'`
-httpd_config_file=`apachectl -V | awk -F "\"" '/SERVER_CONFIG_FILE/ {print $2}'`
-httpd_root_and_config_file=$httpd_root"/"$httpd_config_file
-
-# Apache Includes (only 1 level deep from main configuration file)
-httpd_main_include=`awk -v var="$httpd_root"  '/^Include/ {print var "/" $2}' $httpd_root_and_config_file`
-IFS=$'\n' list_of_apache_includes=($(ls $httpd_main_include))
-
+#apachectl -V 1> /dev/null 2>&1
+if [ $(which apachectl | wc -l) != 0 ]; then
+	httpd_root=`apachectl -V | awk -F "\"" '/HTTPD_ROOT/ {print $2}'`
+	httpd_config_file=`apachectl -V | awk -F "\"" '/SERVER_CONFIG_FILE/ {print $2}'`
+	httpd_root_and_config_file=$httpd_root"/"$httpd_config_file
+	# Apache Includes (only 1 level deep from main configuration file)
+	httpd_main_include=`awk -v var="$httpd_root"  '/^Include/ {print var "/" $2}' $httpd_root_and_config_file`
+	IFS=$'\n' list_of_apache_includes=($(ls $httpd_main_include))
+fi
 ### Get list of all PHP-FPM pools from process list
 IFS=$'\n' list_of_pools=($(ps aux | grep "php-fpm" | grep -v ^root | grep -v grep | awk -F "pool " '{print $2}' | sort | uniq | sed -e 's/ //g'))
 
