@@ -336,7 +336,7 @@ echo -n "Memory available to assign to PHP-FPM pools in KB: "
    # RHEL 7's free reports look different to CentOS6, Ubuntu 14 and Debian 8 so I have to 1) check whether this is RHEL/CentOS 7, and 2) if it is, use different formulas
    rhel7_check=0
    if [ -f /etc/redhat-release ]; then
-      rhel7_check=`cat /etc/redhat-release | awk -F "release" '{print $2}' | awk '{print $1}' | cut -d. -f1` > /dev/null
+      rhel7_check=`grep -v ^# /etc/redhat-release | awk -F "release" '{print $2}' | awk '{print $1}' | cut -d. -f1` > /dev/null
    fi
    # If this is RHEL 7 then use this formula
    if [ $rhel7_check == '7' ]; then
