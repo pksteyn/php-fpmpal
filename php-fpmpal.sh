@@ -147,9 +147,75 @@ if [ 0 == 1 ]; then
  
    # Find the FastCGIExternalServer directive for this socket in the Apache configuration and get the "Alias/Action"
    action_alias=`grep -h "FastCGIExternalServer" ${list_of_apache_includes[@]} | grep -v "#" | grep $pool_listener | awk '{print $2}'`
+   #echo $action_alias
+   
+   # Find all the vhost files within which the "Alias/Action" is referenced
+   # First find out whether any sites rely on this pool
+   grep -H $action_alias ${list_of_apache_includes[@]} | grep Alias | grep -v "#" | awk '{print $4, $1}' | grep "$action_alias " > /dev/null
+   # If no sites rely on it
+   if [ $? == 1 ]; then
+      echo "Site(s) that rely on this pool: None"
+   
+   # Else if at least one site relies on it
+   else
+      IFS=$'\n' vhost_name=($(grep -H $action_alias ${list_of_apache_includes[@]} | grep Alias | grep -v "#" | awk '{print $4, $1}' | grep "$action_alias " | awk '{print $2}' | cut -d: -f1))
+      #echo ${vhost_name[@]}
+
+     # As there may be multiple vhosts in the file, we want to extract just the vhost within which the "Alias/Action" was referenced
+      echo "" > temp_filelist
+      echo "" > filelist
+   
+      #action_line_nr=`grep -hn $action_alias$ ${list_of_apache_includes[@]} | grep Alias | grep -v "#" | cut -d: -f1`
+      #echo $action_line_nr >> temp_filelist
+   
+      let no_of_vhosts_that_rely_on_this_pool=(${#vhost_name[@]}-1)
+  
+      #echo ${vhost_name[@]}
+      #echo -n "nr_of_vhosts: "
+      #echo $no_of_vhosts_that_rely_on_this_pool
+
+      #nr_of_vhost_name=${#vhost_name[@]}
+
+      #let nr_of_vhost_name=(${#vhost_name[@]}-1) 
+      #echo $nr_of_vhost_name
+      # for every vhosts pull out the sitename
+      echo -n "Site(s) that rely on this pool: "
+      #for a in ${nr_of_vhost_name[@]} ###
+      #for ((i=0; i<=no_of_vhosts_that_rely_on_this_pool; i++))
+      for ((i=0; i<=no_of_vhosts_that_rely_on_this_pool; i++))
+      #for ((i=0; i<=1; i++))
+      do ###
+         action_line_nr=`grep -hn $action_alias$ ${vhost_name[$i]} | grep Alias | grep -v "#" | cut -d: -f1`
+         
+         echo $action_line_nr >> temp_filelist
+         egrep -n "<VirtualHost|</VirtualHost" ${vhost_name[$i]} | grep -v "#" | cut -d: -f1 >> temp_filelist
+         sort -n temp_filelist > filelist
+         vhost_start_line=`grep -B1 $action_line_nr filelist | head -1`
+         vhost_end_line=`grep -A1 $action_line_nr filelist | tail -1`
+         rm -rf filelist
+         rm -rf temp_filelist
+         
+         site_name=`sed -n "$vhost_start_line,$vhost_end_line p" ${vhost_name[$i]} | grep ServerName | awk '{print $2}'`
+         echo -ne "\e[36m\e[1m$site_name\e[0m "
+      done ###
+      echo
+   fi
+fi
+   
+
+
+
+### ROLLBACK
+if [ 0 == 1 ]; then
+   ### Find the site(s) that rely on this pool
+   # Find the socket/TCP listener for this pool
+   pool_listener=`egrep -i "^listen" ${pool_config_file[$i]} | sed -e 's/ //g' | grep "^listen=" | cut -d= -f2`
+
+   # Find the FastCGIExternalServer directive for this socket in the Apache configuration and get the "Alias/Action"
+   action_alias=`grep -h "FastCGIExternalServer" ${list_of_apache_includes[@]} | grep -v "#" | grep $pool_listener | awk '{print $2}'`
 
    # Find the vhost file within which the "Alias/Action" is referenced
-   vhost_name=`grep -H $action_alias ${list_of_apache_includes[@]} | grep Alias | cut -d: -f1` 
+   vhost_name=`grep -H $action_alias ${list_of_apache_includes[@]} | grep Alias | cut -d: -f1`
 
   # As there may be multiple vhosts in the file, we want to extract just the vhost within which the "Alias/Action" was referenced
    echo "" > temp_filelist
@@ -172,8 +238,8 @@ if [ 0 == 1 ]; then
    site_name=`sed -n "$vhost_start_line,$vhost_end_line p" $vhost_name | grep ServerName | awk '{print $2}'`
    echo -e "\e[36m$site_name\e[0m"
 fi
-   
-   
+### /ROLLBACK
+ 
 
    ### Create a list of process IDs that belong to this pool
    IFS=$'\n' list_of_pids=($(ps aux | grep "php-fpm" | grep -v ^root | grep -v grep | grep pool | awk '{print $2, $13}' | grep " ${list_of_pools[$i]}$" | awk '{print $1}'))
