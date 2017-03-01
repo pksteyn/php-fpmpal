@@ -212,7 +212,7 @@ function display_pool_information ()
 
         	### Get the current max_children value
 	        echo -en " \e[2m(max_children: "
-	        current_max_children_value=`grep "^pm.max_children" ${pool_config_file[$i]} | cut -d= -f2 | sed -e 's/ //g'`
+	        current_max_children_value=`grep "^pm.max_children" ${pool_config_file[$i]} | cut -d= -f2 | sed -e 's/ //g' | tail -1`
 	        echo -en "$current_max_children_value)\e[0m\t"
 
 		### Calculate the average process memory usage for this pool
@@ -331,7 +331,7 @@ function succinct_pool_recommendations ()
 		pool_allowed_max_children[$i]=`echo "${pool_allowed_mem_use[$i]} / ${pool_ave_process_size[$i]}" | bc`
 
 		### Get the current max_children value for this PHP-FPM pool
-		current_max_children_value=`grep "^pm.max_children" ${pool_config_file[$i]} | cut -d= -f2 | sed -e 's/ //g'`
+		current_max_children_value=`grep "^pm.max_children" ${pool_config_file[$i]} | cut -d= -f2 | sed -e 's/ //g' | tail -1`
 
 		### Print out all this information
 		echo -e "\t\e[36m\e[1m--- ${list_of_pools[$i]} ---\e[0m"
@@ -366,7 +366,7 @@ function detailed_pool_recommendations ()
                 pool_allowed_max_children[$i]=`echo "${pool_allowed_mem_use[$i]} / ${pool_ave_process_size[$i]}" | bc`
 
                 ### Get the current max_children value for this PHP-FPM pool
-                current_max_children_value=`grep "^pm.max_children" ${pool_config_file[$i]} | cut -d= -f2 | sed -e 's/ //g'`
+                current_max_children_value=`grep "^pm.max_children" ${pool_config_file[$i]} | cut -d= -f2 | sed -e 's/ //g' | tail -1`
 
                 ### Print out all this information
                 echo -e "\t\e[36m\e[1m--- ${list_of_pools[$i]} ---\e[0m"
