@@ -272,7 +272,7 @@ fi
 
    ### Get the current max_children value
    echo -n "Current max_children value: "
-   current_max_children_value=`grep "^pm.max_children" ${pool_config_file[$i]} | cut -d= -f2 | sed -e 's/ //g'`
+   current_max_children_value=`grep "^pm.max_children" ${pool_config_file[$i]} | cut -d= -f2 | sed -e 's/ //g' | tail -1`
    echo $current_max_children_value
 
    ### Calculate the total memory usage for this pool
@@ -490,7 +490,7 @@ do
    ### Divide the average process size for this pool by the total "allowed" memory usage for this pool to get a recommended max_children value
    pool_allowed_max_children[$i]=`echo "${pool_allowed_mem_use[$i]} / ${pool_ave_process_size[$i]}" | bc`
    ### Get the current max_children value for this PHP-FPM pool
-   current_max_children_value=`grep "^pm.max_children" ${pool_config_file[$i]} | cut -d= -f2 | sed -e 's/ //g'`
+   current_max_children_value=`grep "^pm.max_children" ${pool_config_file[$i]} | cut -d= -f2 | sed -e 's/ //g' | tail -1`
    ### Print out all this information
    echo -e "\e[36m\e[1m-- ${list_of_pools[$i]} --\e[0m currently uses ${total_pool_mem_usage[$i]} KB memory (\e[33m${pool_perc_mem_use[$i]}%\e[0m of all PHP-FPM memory usage). It should be allowed to use about ${pool_allowed_mem_use[$i]} KB of all available memory. Its average process size is ${pool_ave_process_size[$i]} KB so this means \e[38;5;208mmax_children should be set to ~\e[1m${pool_allowed_max_children[$i]}\e[0m. It is currently set to $current_max_children_value (this can be changed in ${pool_config_file[$i]})."
 done
