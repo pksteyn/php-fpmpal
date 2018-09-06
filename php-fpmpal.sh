@@ -32,7 +32,8 @@ bc -v 1> /dev/null 2>&1
 if [ $? != 0 ]; then
    echo -e "\e[31m\"bc\" is not installed. This script depends on it.\e[0m"
 while true; do
-   read -p "Do you wish to install bc? (y/n)" yn
+   echo "Do you wish to install bc? (y/n)"
+   read yn < /dev/tty
    case $yn in
       [Yy]* ) python -mplatform | egrep -i 'debian|ubuntu' 2>&1 > /dev/null && apt-get install bc -y -qq || yum install bc -y -q ; break;;
       [Nn]* ) exit;;
