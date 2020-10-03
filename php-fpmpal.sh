@@ -77,6 +77,13 @@ if [ $? == 0 ]; then
    fpm_type=`php5-fpm -i 2>&1 | grep "SERVER\[\"_\"\]" | cut -d\/ -f4`
 fi
 
+for cpanel_php_fpm in $(ls /opt/cpanel/ea-php*/root/usr/sbin/php-fpm); do $cpanel_php_fpm -v > /dev/null 2>&1; done
+if [ $? == 0 ]; then
+   phpfpm_installed=1
+   cpanel_php_fpm= $(ls /opt/cpanel/ea-php*/root/usr/sbin/php-fpm) > /dev/null
+   for cpanel_php_fpm in $(ls /opt/cpanel/ea-php*/root/usr/sbin/php-fpm); do $cpanel_php_fpm -i > /dev/null 2>&1; done
+fi
+
 ### Exit if PHP-FPM is not installed
 if [ $phpfpm_installed == 0 ]; then
    echo -e "\e[31m!!! PHP-FPM not detected. Exiting. !!!\e[0m"
