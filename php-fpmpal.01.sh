@@ -287,6 +287,21 @@ function display_server_memory_information ()
 			ubuntu1804_check=0
 		fi
 	fi
+	
+	ubuntu2004_check=0
+	if [ -f /etc/lsb-release ]; then
+		ubuntu2004_check=`grep DISTRIB_ID /etc/lsb-release | cut -d= -f2`
+		if [ $ubuntu2004_check == 'Ubuntu' ]; then
+			ubuntu2004_check=`grep DISTRIB_RELEASE /etc/lsb-release | cut -d= -f2`
+			if [ $ubuntu2004_check == '20.04' ]; then
+				ubuntu2004_check=1
+			else
+				ubuntu2004_check=0
+			fi
+		else
+			ubuntu2004_check=0
+		fi
+	fi
 
 	# If this is RHEL 7 then use this formula
 	if [ $rhel7_check == '7' ]; then
